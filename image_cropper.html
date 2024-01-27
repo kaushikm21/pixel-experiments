@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Cropper</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+</head>
+<body>
+<input type="file" id="imageInput" style="display: none;">
+<button id="chooseImageButton">Choose Image</button>
+
+<div id="croppedImageContainer" style="max-width: 100%; display: none;">
+    <img id="croppedImage" style="max-width: 100%;">
+</div>
+
+<button id="getCroppedImage" style="display: none;">Crop Image</button>
+
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+<script>
+    $(document).ready(function() {
+        var cropper;
+        var  dataUrl;
+        $('#chooseImageButton').on('click', function() {
+            $('#imageInput').trigger('click');
+        });
+
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Enter' && document.activeElement !== $('#imageInput')[0]) {
+                $('#getCroppedImage').trigger('click');
+                e.preventDefault(); // Prevent the default behavior of the Enter key
+            }
+        });
+
+        $('#imageInput').on('change', function(e) {
+            var input = e.target;
+
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+
+                reader.onload = function(e) {
+                    $('#croppedImage').attr('src', e.target.result);
+                    $('#croppedImageContainer').show();
+
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+
+                    cropper = new Cropper($('#croppedImage')[0], {
+                        aspectRatio: NaN,
+                        viewMode: 1,
+                        movable: true,
+                        zoomable: false,
+                        autoCrop: true,
+                        cropBoxResizable: false,
+                        autoCropArea: [0, 0, 100, 100], // Set the autoCropArea
+                    });
+
+                    $('#getCroppedImage').show();
+                };
+
+                reader.readAsDataURL(input.files[0]);
+            }
+        });
+
+$('#getCroppedImage').on('click', function() {
+    var croppedData = cropper.getData();
+    console.log('Cropped Data:', croppedData);
+
+    // Prepare the data as a JavaScript object
+    var postData = {
+        x: croppedData.x,
+        y: croppedData.y,
+        width: croppedData.width,
+        height: croppedData.height
+    };
+
+    // Add the dataUrl to postData
+    postData.dataUrl = $('#croppedImage').attr('src');
+
+    $.ajax({
+        type: 'POST',
+        url: '/crop',
+        contentType: 'application/json;charset=UTF-8',
+        dataType: 'json',
+        data: JSON.stringify(postData),
+        success: function(response) {
+            handleSuccess(response);
+        },
+        error: function(xhr, status, error) {
+            handleError(xhr, status, error);
+        }
+    });
+});
+
+function handleSuccess(response) {
+    alert('Success! Image cropped and saved successfully.');
+    console.log('Success:', response);
+}
+
+function handleError(xhr, status, error) {
+    alert('Error! Unable to crop image. Please try again.');
+    console.error('Error:', xhr, status, error);
+}
+
+
+
+    });
+</script>
+
+
+</body>
+</html>
